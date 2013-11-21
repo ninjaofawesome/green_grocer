@@ -15,6 +15,44 @@ COUPS = [  {:item=>"AVOCADO", :num=>2, :cost=>5.00},
     {:item=>"BEER", :num=>2, :cost=>20.00},
     {:item=>"CHEESE", :num=>3, :cost=>15.00}]
 
+#randomly generates set of coupons
+def generate_coupons
+  # UPDATE a constant called COUPS with updated discounts for those on clearance
+  update_coupons_for_clearance_discount
+  coups = []
+  rand(2).times do
+    coups.push(COUPS.sample)
+  end
+  update_coupons_for_triple_discount(coups) if coups.size == 2
+  coups
+end
+
+# APPLY THE COUPONS
+
+#changes price for couponed items
+def coupon_items(cart, coupons)
+  return 0 if coupons.nil?
+  cost = 0
+  cart.each do |item|
+    # items {"AVOCADO"=>{:price=>3.0, :clearance_items=>true, :count=>2}}
+    item.each do |name, attributes|
+      # name is "AVOCADO", an attributes is {:price=>3.0, :clearance_items=>true, :count=>2}
+      coupons.each do |coupon|
+        # coupon => {:item=>"AVOCADO", :num=>2, :cost=>5.00}
+        # we want to make sure we have the minimum number of the food to apply the coupon
+        if name == coupon[:item] && attributes[:count] >= coupon[:num]
+          # add the item to our total cost
+          cost += coupon[:cost]
+          # so we've paid for the number of items reflected in the coupon
+          attributes[:count] = attributes[:count] - coupon[:num]
+          # so if we started with 3 avocados, wed now have 1 in the cart, and 2 paid for
+        end
+      end
+    end
+  end
+  cost
+end
+
 # RULE
 ##if any of the items are on clearance_items add a 20% discount
 
@@ -62,11 +100,48 @@ def update_cart_counts(cart, counts)
   end
 end
 
+#gives clearance_items discount
+def clearance_items(cart, cost)
+  # for items on clearance we're going to apply a 20 percent discount
+  cart.each do |item|
+    item.each do |name, attribute|
+      if attribute[:clearance]
+        # price * quantity, get the discount, add to our total cost, and mark
+        # the item as paid for by setting the count to 0
+        cost += (attribute[:price] * attribute[:count]) * 0.8
+        attribute[:count] = 0
+      end
+    end
+  end
+  cost
+end
+
+#gives cost of normal items
+def full_price_items(cart, cost)
+  cart.each do |item|
+    item.each do |name,attribute|
+      cost += (attribute[:price] * attribute[:count])
+    end
+  end
+  cost
+end
+
+#gives cost of normal items
+def full_price_items(cart, cost)
+  cart.each do |item|
+    item.each do |name,attribute|
+      cost += (attribute[:price] * attribute[:count])
+    end
+  end
+  cost
+end
+
+generated_coupons = generate_coupons
 counts = count_cart_items(ITEMS)
 # update a constant called ITEMS
-update_cart_counts(ITEMS, counts)
-# update a constant called COUP
-update_coupons_for_clearance_discount
-
+cart = update_cart_counts(ITEMS, counts)
+cost = coupon_items(cart, generated_coupons)
+cost = clearance_items(cart, cost)
+cost = full_price_items(cart, cost)
 debugger
 puts 'hi'
